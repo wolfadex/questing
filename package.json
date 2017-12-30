@@ -1,0 +1,11 @@
+{
+  "name": "questing",
+  "version": "0.1.0",
+  "main": "index.js",
+  "repository": "https://github.com/wolfadex/questing.git",
+  "author": "Wolfgang Schuster <wolfadex@gmail.com>",
+  "dependencies": {
+    "apiai": "^4.0.3",
+    "prompt": "^1.0.0"
+  }
+}
