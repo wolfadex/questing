@@ -1,0 +1,27 @@
+{
+  "title": "Brief",
+  "author": "Wolfgang Schuster",
+  "inventory": [],
+  "location": "start",
+  "items": {
+    "pebble": "A tiny stone, not sure it could be used for anything"
+  },
+  "spaces": {
+    "start": {
+      "description": "A small white room with a red door.",
+      "exits": {
+        "red_door": "end"
+      },
+      "items": [
+        "pebble"
+      ]
+    },
+    "end": {
+      "description": "A large open field, you've won the game!",
+      "exits": {
+        "red_door": "start"
+      },
+      "items": []
+    }
+  }
+}
