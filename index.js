@@ -17,12 +17,18 @@ const app = apiai(options.API_KEY);
 prompt.message = 'Next action';
 prompt.delimiter = '';
 
-function gameLoop(gameData, nextLine = '') {
+function gameLoop(gameData, nextLine = '', prevResponse) {
   console.log('\x1Bc');
   console.log(`
 ${nextLine}
 
 `);
+
+  if (Object.keys(devConfig).length > 0) {
+    // Dev mode
+    console.log('Response:', prevResponse);
+    console.log('Game Data:', gameData);
+  }
 
   prompt.get('?', function(err, result) {
     if (result['?'] === 'quit') {
@@ -38,10 +44,13 @@ ${nextLine}
         } = {},
       } = response;
       const {
-        receiver,
-        action,
+        receiver = '',
+        action = '',
+        usingItem = '',
       } = parameters;
       const receiverTrimmed = receiver.trim().replace(/\s/gi, '_');
+      const usingItemTrimmed = usingItem.trim();
+      const usingItemNoSpaces = usingItemTrimmed.replace(/\s/gi, '_');
       let nextDialog = `Sorry, I don't understand.`;
       let newGameData = { ...gameData };
       const spaceData = gameData.spaces[gameData.location];
@@ -49,11 +58,16 @@ ${nextLine}
       if (action) {
         switch(action.trim()) {
           case 'move':
-            nextDialog = `
-${spaceData.description}
-`;
-            newGameData.location = newGameData.spaces[newGameData.location].exits[receiverTrimmed] || newGameData.location;
-            nextDialog = newGameData.spaces[newGameData.location].description;
+            if (spaceData.exits[receiverTrimmed]) {
+              if (spaceData.exits[receiverTrimmed].locked) {
+                nextDialog = 'That way is locked.';
+              } else {
+                newGameData.location = spaceData.exits[receiverTrimmed].destination || newGameData.location;
+                nextDialog = newGameData.spaces[newGameData.location].description;
+              }
+            } else {
+              nextDialog = `Can't go that way.`;
+            }
             break;
           case 'inspect': {
             if (receiverTrimmed === 'inventory') {
@@ -61,12 +75,10 @@ ${spaceData.description}
                 nextDialog = `You have nothing on you.`;
               } else {
                 nextDialog = `You have in your inventory:
-${gameData.inventory.join('\n')}.`;
+${gameData.inventory.join('\n')}`;
               }
             } else if (receiverTrimmed === 'room') {
-              nextDialog = spaceData.description;
-            } else if (spaceData.items.includes(receiverTrimmed)) {
-              nextDialog = `${newGameData.items[receiverTrimmed]}
+              nextDialog = `${spaceData.description}
 
 Items:
 ${spaceData.items.join('\n')}`;
@@ -83,7 +95,9 @@ ${spaceData.items.join('\n')}`;
                 items: newItems
               };
               newGameData.inventory.push(...playerNewItems);
+              nextDialog = `You now have '${playerNewItems}'`;
             }
+            break;
           }
           case 'drop': {
             if (newGameData.inventory.includes(receiverTrimmed)) {
@@ -93,14 +107,25 @@ ${spaceData.items.join('\n')}`;
               newGameData.spaces[newGameData.location].items.push(...playerOldItems);
               newGameData.inventory = oldItems.slice(0);
             }
-          }
-          default:
-            console.log('carl', response)
             break;
+          }
+          case 'use': {
+            if (newGameData.inventory.includes(usingItemTrimmed)) {
+              if (spaceData.exits[receiverTrimmed].locked === usingItemNoSpaces) {
+                newGameData.spaces[newGameData.location].exits[receiverTrimmed].locked = false;
+                nextDialog = 'You unlocked it!';
+              } else {
+                nextDialog = `That item doesn't work on that door`;
+              }
+            } else {
+              nextDialog = `That item isn't in your inventory.`;
+            }
+            break;
+          }
         }
       }
 
-      gameLoop(newGameData, nextDialog);
+      gameLoop(newGameData, nextDialog, response);
     });
     request.on('error', (error) => {
       console.log(error);
